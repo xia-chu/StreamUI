@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>StreamUI</title>
+  <meta content="width=device-width, initial-scale=1, maximum-scale=1" name="viewport" />
+  <link href="assets/layui/css/layui.css" rel="stylesheet" />
+  <link href="./assets/logo.svg" rel="icon" type="image/svg" />
+  <style>
+    .layui-layer-title {
+      background: #fafafa;
+      height: 35px;
+      line-height: 40px;
+    }
+
+    .layui-layer-setwin {
+      top: 10px;
+    }
+
+    .layui-btn {
+      border-radius: 5px;
+    }
+
+    .layui-layer {
+      border-radius: 10px;
+    }
+
+    .layui-layer-title {
+      border-radius: 10px;
+    }
+
+    .layui-card {
+      border-radius: 8px;
+    }
+
+    .layui-nav .layui-this:after,
+    .layui-nav-bar {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="layui-layout layui-layout-admin">
+    <div class="layui-header" style="background-color: #fafafa;">
+      <div class="layui-logo" style="background-color: #2f363c;">
+        <span class="logo-text" style="font-weight: 600; font-size: 1.3rem; color: #c2c2c2;">StreamUI</span>
+        <img src="./assets/logo.svg" alt="logo" class="logo-icon"
+          style="display: none; height: 22px; vertical-align: middle;">
+      </div>
+
+      <!-- 头部区域 -->
+      <ul class="layui-nav layui-layout-left">
+
+        <li class="layui-nav-item" lay-header-event="toggleSidebar" title="展开/收缩侧边栏">
+          <a>
+            <i class="layui-icon layui-icon-shrink-right" style="color: #23292e; font-size: 1.2rem;"></i>
+          </a>
+        </li>
+
+        <li class="layui-nav-item" lay-header-event="refreshPage" title="刷新当前页面">
+          <a>
+            <i class="layui-icon layui-icon-refresh layui-anim" style="color: #23292e; font-size: 1.2rem;"></i>
+          </a>
+        </li>
+      </ul>
+
+      <ul class="layui-nav layui-layout-right" style="padding: 0 16px;">
+      </ul>
+    </div>
+
+    <div class="layui-side layui-bg-black">
+      <div class="layui-side-scroll">
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/home.html"><i class="layui-icon layui-icon-console"
+                style="margin-right: 20px"></i>首页概览</a>
+          </li>
+        </ul>
+
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/pull-stream.html"><i class="layui-icon layui-icon-video"
+                style="margin-right: 20px"></i>主动拉流</a>
+          </li>
+        </ul>
+
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/stream-push.html"><i class="layui-icon layui-icon-video"
+                style="margin-right: 20px"></i>被动推流</a>
+          </li>
+        </ul>
+
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/video-wall.html"><i class="layui-icon layui-icon-layer"
+                style="margin-right: 20px"></i>分屏展示</a>
+          </li>
+        </ul>
+
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/playback.html"><i class="layui-icon layui-icon-play"
+                style="margin-right: 20px"></i>录像回看</a>
+          </li>
+        </ul>
+
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/api-docs.html"><i class="layui-icon layui-icon-link"
+                style="margin-right: 20px"></i>接口文档</a>
+          </li>
+        </ul>
+
+        <ul class="layui-nav layui-nav-tree">
+          <li class="layui-nav-item">
+            <a data-page="./pages/settings.html"><i class="layui-icon layui-icon-set"
+                style="margin-right: 20px"></i>基础配置</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="layui-body" style="background-color: #eeeeee; overflow-y: auto; padding: 0px;"></div>
+
+    <script src="assets/layui/layui.js"></script>
+    <script src="./assets/echarts.min.js"></script>
+    <script src="./assets/ZLMRTCClient.js"></script>
+
+    <script>
+      // 检查登录状态
+      (function checkLoginStatus() {
+        const loginTimeStr = localStorage.getItem('loginTime');
+
+        // 如果没有 loginTimeStr，则跳转到登录页面
+        if (!loginTimeStr) {
+          window.location.href = 'login.html';
+          return;
+        }
+
+        const loginTime = parseInt(loginTimeStr);
+        const now = new Date().getTime();
+
+        // 计算已过去多少天（向上取整）
+        const diffInDays = Math.ceil((now - loginTime) / (24 * 60 * 60 * 1000));
+
+        if (diffInDays > 3) {
+          // 超过3天，清除并重新登录
+          localStorage.removeItem('loginTime');
+          window.location.href = 'login.html';
+        }
+      })();
+    </script>
+
+    <script>
+
+      layui.use(["util", "jquery"], function () {
+
+        let util = layui.util;
+        let $ = layui.jquery;
+
+        // 复制函数
+        window.copyToClipboard = function (text) {
+          const textarea = document.createElement("textarea");
+          textarea.value = text;
+          textarea.style.position = "fixed";
+          textarea.style.left = "-9999px";
+          textarea.style.top = "-9999px";
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand("copy");
+            layer.msg("✅ 已复制", { time: 500 });
+          } catch (err) {
+            layer.msg("❌ 复制失败", { time: 1000 });
+          }
+          document.body.removeChild(textarea);
+        };
+
+        // 子页面加载函数
+        function loadPage(url) {
+          $(".layui-body").html(
+            '<div style="text-align:center;padding:20px;">加载中...</div>'
+          );
+
+          return $.get(url)
+            .done(function (data) {
+              // 离开页面前执行回调函数
+              if (typeof destroyVideoCells === "function") {
+                destroyVideoCells();
+              }
+              if (typeof clearnTimer === "function") {
+                clearnTimer();
+              }
+
+              $(".layui-body").html(data);
+
+              // 找到匹配 data-page 的菜单项并添加高亮
+              $(".layui-nav-tree .layui-this").removeClass("layui-this");
+              $('.layui-nav-tree a[data-page="' + url + '"]')
+                .parent()
+                .addClass("layui-this");
+            })
+            .fail(function () {
+              $(".layui-body").html(
+                `<div style="color:#ff5722; padding:20px;">加载失败: 页面 ${url} 不存在</div>`
+              );
+            });
+
+        }
+
+        // 使用事件委托监听菜单点击
+        $("body").on("click", "a[data-page]", function (e) {
+          e.preventDefault();
+          loadPage((url = $(this).data("page")));
+        });
+
+        let isCollapse = false;
+        util.event('lay-header-event', {
+          toggleSidebar: function (othis) {
+
+            const icon = othis.find('i');
+            const $logo = $('.layui-logo');
+            const $logoText = $logo.find('.logo-text');
+            const $logoIcon = $logo.find('.logo-icon');
+
+            if (!isCollapse) {
+              // 收缩状态
+              $('.layui-layout-admin .layui-header .layui-logo').animate({ width: '54px' }, 200);
+              $('.layui-layout-admin .layui-header .layui-layout-left').animate({ left: '54px' }, 200);
+              $('.layui-layout-admin .layui-side').animate({ width: '54px' }, 200);
+              $('.layui-layout-admin .layui-body').animate({ left: '54px' }, 200);
+
+              $logoText.hide();
+              $logoIcon.show();
+
+              icon.removeClass('layui-icon-shrink-right').addClass('layui-icon-spread-left');
+
+              isCollapse = true;
+
+            } else {
+              // 展开状态
+              $('.layui-layout-admin .layui-header .layui-logo').animate({ width: '200px' }, 200);
+              $('.layui-layout-admin .layui-header .layui-layout-left').animate({ left: '200px' }, 200);
+              $('.layui-layout-admin .layui-side').animate({ width: '200px' }, 200);
+              $('.layui-layout-admin .layui-body').animate({ left: '200px' }, 200);
+
+              $logoText.show();
+              $logoIcon.hide();
+
+              icon.removeClass('layui-icon-spread-left').addClass('layui-icon-shrink-right');
+
+              isCollapse = false;
+
+            }
+          },
+          refreshPage: function () {
+            const $icon = $(this).find(".layui-icon");
+            const currentUrl = $('.layui-nav-tree li.layui-this a[data-page]').data('page');
+
+            if (!currentUrl) { return }
+
+            $icon
+              .removeClass("layui-icon-refresh")
+              .addClass("layui-icon-loading layui-anim layui-anim-rotate");
+
+            loadPage(currentUrl).always(() => {
+              $icon
+                .removeClass("layui-icon-loading layui-anim layui-anim-rotate")
+                .addClass("layui-icon-refresh");
+            });
+          }
+        });
+
+        // 默认加载首页
+        loadPage("./pages/home.html");
+      });
+    </script>
+</body>
+
+</html>
