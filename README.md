@@ -5,23 +5,26 @@
 
 ### 概述
 
-一个极简、轻便的 NVR
+一个极简、轻便、易于二次开发的流媒体管理平台
 
-- 支持 RTSP/RTMP/HLS/SRT/WebRTC/RTP/GB28181 等协议接入
+### 支持功能
 
-- 支持 Onvif 协议接入, 云台控制
+- 支持 RTSP/RTMP/HLS/WebRTC/RTP/GB28181 等主流协议的拉流推流接入
+
+- 支持 ONVIF 设备识别，云台控制
 
 - 支持分发 RTSP/WebRTC/RTMP/FLV/HLS/HLS-fMP4/HTTP-TS/HTTP-fMP4 等协议
 
 - 支持多屏播放
 
-- 支持视频本地录制、回放、下载、自动清理
+- 支持流本地录制、回放、下载、自动清理
 
-- 支持 GB28181 级联（待开发...）
+- 支持 GB28181 接入/级联（coming soon ...）
 
 ### 快速启动
 
-本项目推荐 docker compose 部署，密码默认为 litenvr
+本项目推荐 docker compose 部署，密码默认为 streamui
+
 
 ```bash
 cd ./docker
