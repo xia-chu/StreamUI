@@ -68,7 +68,7 @@
         let form = layui.form;
         form.render();
 
-        // 处理登录逻辑
+        // 简易的登录逻辑实现，可在此修改登录密码
         window.handleLogin = function () {
           const password = document.getElementById("password").value;
 
@@ -82,7 +82,7 @@
               shift: 1,
             });
           }
-          return false; // 阻止表单提交
+          return false;
         };
       });
     </script>
