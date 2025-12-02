@@ -100,7 +100,7 @@ After the first startup, it's recommended to adjust the settings according to yo
 
 ## Repo Structure
 
-StreamUI aims for a minimal design. Instead of using heavy front-end frameworks like Vue or React, or complex back-end frameworks like Java Spring, it chooses lightweight tools: Layui for the front end and FastAPI for the back end. This makes the code easy to understand and modify.
+StreamUI keeps it simple—using lightweight Layui (front-end) and FastAPI (back-end) instead of heavy frameworks like Vue, React, or Spring. Easy to understand and modify.
 
 StreamUI 追求极简实现，前端未采用 Vue、React 等重量级框架，后端也避开了功能繁杂的 Java Spring 体系，转而选用轻量级的 Layui 与 FastAPI 组合。整体架构简洁清晰，易于理解和二次开发。
 
