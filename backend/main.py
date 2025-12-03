@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import mk_loader
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -12,17 +13,17 @@ from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from onvif.api import router as onvif_router
-from scheduler import cleanup_old_videos
-from utils import get_video_shanghai_time, get_zlm_secret
+from .onvif.api import router as onvif_router
+from .scheduler import cleanup_old_videos
+from .utils import get_video_shanghai_time, get_zlm_secret
 
 # =========================================================
 # zlmediakit 地址
-ZLM_SERVER = "http://127.0.0.1:8080"
+ZLM_SERVER = "http://127.0.0.1:" + mk_loader.get_config('http.port')
 # zlmediakit 密钥
-ZLM_SECRET = get_zlm_secret("/opt/media/conf/config.ini")
+ZLM_SECRET = mk_loader.get_config('api.secret')
 # zlmediakit 录像回放
-RECORD_ROOT = Path("/opt/media/bin/www/record")
+RECORD_ROOT = Path(mk_loader.get_config('protocol.mp4_save_path'))
 # 录像最大切片数
 KEEP_VIDEOS = 72
 # =========================================================
