@@ -59,7 +59,7 @@
   </head>
 
   <body>
-    <div style="padding: 16px 16px 0 16px">
+    <!-- <div style="padding: 16px 16px 0 16px">
       <div class="layui-card">
         <div class="layui-card-body">
           <div>
@@ -70,7 +70,7 @@
               type="button"
             >
               接收FFmpeg
-            </button>
+            </button> -->
             <!-- <button
               class="layui-btn"
               id="ID_gb28181_push_btn"
@@ -79,14 +79,14 @@
             >
               接收GB28181
             </button> -->
-          </div>
+          <!-- </div>
         </div>
       </div>
-    </div>
+    </div> -->
 
     <div style="padding: 16px">
       <div class="layui-card">
-        <div class="layui-card-body">
+        <div class="layui-card-body" style="padding: 16px 16px">
           <div class="layui-form" style="padding-bottom: 16px">
             <div class="layui-inline">
               <div
@@ -772,26 +772,26 @@
         });
 
         // 监听ffmpeg推流按钮
-        $("#ID_ffmpeg_push_btn").on("click", function () {
-          layer.open({
-            type: 1,
-            title: "接收FFmpeg",
-            area: ["auto", "auto"],
-            content: `<div style="padding: 20px; line-height: 1.8;">
-                      <div style="margin-bottom: 15px;">将源视频推流给 StreamUI，以 FFmpeg 为例：</div>
-                        <div>1️⃣ 使用 RTSP 方式推流</div>
-                        <pre style="background:#f8f8f8; padding:10px; border:1px solid #ddd; border-radius:4px; overflow:auto;">ffmpeg -re -i ./test.mp4 -vcodec h264 -acodec aac -f rtsp -rtsp_transport tcp rtsp://${window.location.hostname}:8554/{设置应用名}/{设置流ID}</pre>
-                        <div>2️⃣ 使用 RTMP 方式推流</div>
-                        <pre style="background:#f8f8f8; padding:10px; border:1px solid #ddd; border-radius:4px; overflow:auto;">ffmpeg -re -i ./test.mp4 -vcodec h264 -acodec aac -f flv rtmp://${window.location.hostname}:1935/{设置应用名}/{设置流ID}</pre>
-                        <div>3️⃣ 使用 RTP 方式推流</div>
-                        <pre style="background:#f8f8f8; padding:10px; border:1px solid #ddd; border-radius:4px; overflow:auto;">ffmpeg -re -i ./test.mp4  -vcodec h264 -acodec aac -f rtp_mpegts rtp://${window.location.hostname}:10000</pre>
-                        <div style="margin-top: 15px;">参考 🔗<a href="https://github.com/ZLMediaKit/ZLMediaKit/wiki/ZLMediaKit%E6%8E%A8%E6%B5%81%E6%B5%8B%E8%AF%95" target="_blank" rel="noopener">推流测试</a></div>
-                    </div>`,
-            shadeClose: true, // 点击遮罩关闭弹窗
-            btn: null, // 不显示底部按钮
-            success: function (layero, index) {},
-          });
-        });
+        // $("#ID_ffmpeg_push_btn").on("click", function () {
+        //   layer.open({
+        //     type: 1,
+        //     title: "接收FFmpeg",
+        //     area: ["auto", "auto"],
+        //     content: `<div style="padding: 20px; line-height: 1.8;">
+        //               <div style="margin-bottom: 15px;">将源视频推流给 StreamUI，以 FFmpeg 为例：</div>
+        //                 <div>1️⃣ 使用 RTSP 方式推流</div>
+        //                 <pre style="background:#f8f8f8; padding:10px; border:1px solid #ddd; border-radius:4px; overflow:auto;">ffmpeg -re -i ./test.mp4 -vcodec h264 -acodec aac -f rtsp -rtsp_transport tcp rtsp://${window.location.hostname}:8554/{设置应用名}/{设置流ID}</pre>
+        //                 <div>2️⃣ 使用 RTMP 方式推流</div>
+        //                 <pre style="background:#f8f8f8; padding:10px; border:1px solid #ddd; border-radius:4px; overflow:auto;">ffmpeg -re -i ./test.mp4 -vcodec h264 -acodec aac -f flv rtmp://${window.location.hostname}:1935/{设置应用名}/{设置流ID}</pre>
+        //                 <div>3️⃣ 使用 RTP 方式推流</div>
+        //                 <pre style="background:#f8f8f8; padding:10px; border:1px solid #ddd; border-radius:4px; overflow:auto;">ffmpeg -re -i ./test.mp4  -vcodec h264 -acodec aac -f rtp_mpegts rtp://${window.location.hostname}:10000</pre>
+        //                 <div style="margin-top: 15px;">参考 🔗<a href="https://github.com/ZLMediaKit/ZLMediaKit/wiki/ZLMediaKit%E6%8E%A8%E6%B5%81%E6%B5%8B%E8%AF%95" target="_blank" rel="noopener">推流测试</a></div>
+        //             </div>`,
+        //     shadeClose: true, // 点击遮罩关闭弹窗
+        //     btn: null, // 不显示底部按钮
+        //     success: function (layero, index) {},
+        //   });
+        // });
 
         // 初始化
         $("#ID_searchApp").val("");

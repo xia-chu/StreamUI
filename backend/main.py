@@ -11,7 +11,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-
 from onvif.api import router as onvif_router
 from scheduler import cleanup_old_videos
 from utils import get_video_shanghai_time, get_zlm_secret
@@ -21,7 +20,7 @@ from utils import get_video_shanghai_time, get_zlm_secret
 ZLM_SERVER = "http://127.0.0.1:8080"
 # zlmediakit 密钥
 ZLM_SECRET = get_zlm_secret("/opt/media/conf/config.ini")
-# zlmediakit 录像回放
+# zlmediakit 录像
 RECORD_ROOT = Path("/opt/media/bin/www/record")
 # 录像最大切片数
 KEEP_VIDEOS = 72
@@ -68,7 +67,7 @@ t = """
 """
 
 app = FastAPI(
-    title="接口",
+    title="接口文档",
     version="latest",
     description=t,
     lifespan=lifespan,
@@ -141,12 +140,51 @@ async def get_host_stats():
         "total": round(memory.total / (1024**3), 2),
     }
 
-    # 磁盘
-    disk = psutil.disk_usage("/")
-    disk_info = {
-        "used": round(disk.used / (1024**3), 2),
-        "total": round(disk.total / (1024**3), 2),
-    }
+    # 磁盘（按设备聚合，避免重复）
+    disks: list[dict] = []
+    seen_devices: set[str] = set()
+    try:
+        for part in psutil.disk_partitions(all=False):
+            if not part.device or not part.fstype:
+                continue
+            if not (
+                part.device.startswith("/dev/sd")
+                or part.device.startswith("/dev/nvme")
+                or part.device.startswith("/dev/vd")
+            ):
+                continue
+            if part.device in seen_devices:
+                continue
+            try:
+                usage = psutil.disk_usage(part.mountpoint)
+            except PermissionError:
+                continue
+            seen_devices.add(part.device)
+            disks.append(
+                {
+                    "device": part.device,
+                    "mountpoint": part.mountpoint,
+                    "fstype": part.fstype,
+                    "used": round(usage.used / (1024**3), 2),
+                    "total": round(usage.total / (1024**3), 2),
+                }
+            )
+    except Exception:
+        disks = []
+
+    if disks:
+        total_used = sum(d["used"] for d in disks)
+        total_total = sum(d["total"] for d in disks)
+        disk_info = {
+            "used": round(total_used, 2),
+            "total": round(total_total, 2),
+        }
+    else:
+        disk = psutil.disk_usage("/")
+        disk_info = {
+            "used": round(disk.used / (1024**3), 2),
+            "total": round(disk.total / (1024**3), 2),
+        }
 
     # 网络
     net = psutil.net_io_counters()
@@ -162,6 +200,7 @@ async def get_host_stats():
             "cpu": round(cpu_percent, 2),
             "memory": memory_info,
             "disk": disk_info,
+            "disks": disks,
             "network": net_info,
         },
     }
