@@ -14,7 +14,7 @@
 
 - ✅ 支持 RTSP/RTMP/HLS/WebRTC/RTP/GB28181 等主流协议的拉流接入、拉流保存
 
-- ✅ 支持 RTSP/RTMP 等协议的推流接入
+- ✅ 支持 RTSP/RTMP/RTP 等协议的推流接入
 
 - ✅ 支持接入流分发 RTSP/WebRTC/RTMP/FLV/HLS/HLS-fMP4/HTTP-TS/HTTP-fMP4 等协议
 
