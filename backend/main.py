@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 import httpx
+import docker
 import psutil
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -28,6 +29,8 @@ ZLM_SECRET = get_zlm_secret("/opt/media/conf/config.ini")
 RECORD_ROOT = Path("/opt/media/bin/www/record")
 # 录像最大切片数
 KEEP_VIDEOS = 72
+ZLM_CONTAINER_NAME = os.getenv("ZLM_CONTAINER_NAME", "zlm-server")
+STREAMUI_CONTAINER_NAME = os.getenv("STREAMUI_CONTAINER_NAME", "streamui-web-server")
 # =========================================================
 
 
@@ -625,18 +628,6 @@ async def get_start_record(
     stream: str = Query(..., description="流ID"),
     record_days: str = Query(..., description="录制天数"),
 ):
-    stream_record_dir = RECORD_ROOT / app / stream
-
-    date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-
-    # 检查 streamid 目录下有没有 YYYY-MM-DD
-    if stream_record_dir.exists():
-        if any(
-            item.is_dir() and date_pattern.match(item.name)
-            for item in stream_record_dir.iterdir()
-        ):
-            return {"code": -1, "msg": "该流ID录像存在，为防止覆盖，请先删除"}
-
     url = f"{ZLM_SERVER}/index/api/startRecord"
 
     query = {"secret": ZLM_SECRET}
@@ -875,6 +866,41 @@ async def put_server_config(request: Request):
         f"{ZLM_SERVER}/index/api/setServerConfig", params=query_params
     )
     return response.json()
+
+
+@app.get(
+    "/api/server/restart",
+    summary="重启 ZLMediaKit（同时重启 StreamUI）",
+    tags=["配置"],
+)
+async def get_restart_zlm(delay_ms: int = Query(0, description="延迟重启（毫秒）")):
+    await asyncio.sleep(max(delay_ms, 0) / 1000)
+
+    try:
+        client = docker.DockerClient(base_url="unix://var/run/docker.sock")
+        zlm_container = client.containers.get(ZLM_CONTAINER_NAME)
+        zlm_container.restart()
+
+        if STREAMUI_CONTAINER_NAME:
+
+            async def _restart_self():
+                try:
+                    c = docker.DockerClient(base_url="unix://var/run/docker.sock")
+                    self_container = c.containers.get(STREAMUI_CONTAINER_NAME)
+                    self_container.restart()
+                except Exception:
+                    return
+
+            asyncio.create_task(_restart_self())
+
+        return {
+            "code": 0,
+            "msg": "重启成功",
+            "via": "docker",
+            "restart_self": True,
+        }
+    except Exception as e:
+        return {"code": -1, "msg": "重启失败", "error": str(e), "via": "docker"}
 
 
 if __name__ == "__main__":

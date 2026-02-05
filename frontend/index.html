@@ -226,7 +226,7 @@
         // 使用事件委托监听菜单点击
         $("body").on("click", "a[data-page]", function (e) {
           e.preventDefault();
-          loadPage((url = $(this).data("page")));
+          loadPage($(this).data("page"));
         });
 
         let isCollapse = false;

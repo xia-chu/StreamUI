@@ -124,12 +124,76 @@
         let $ = layui.jquery;
 
         let nowVideoCells = [];
+        let streamTreeDataCache = null;
+        let streamTreeLoading = null;
+
+        function buildStreamTreeData(data) {
+          const map = new Map();
+
+          (Array.isArray(data) ? data : []).forEach((item) => {
+            const app = item.app;
+            const stream = item.stream;
+            if (!app || !stream) return;
+
+            const info = { app, stream };
+
+            if (!map.has(app)) {
+              map.set(app, {
+                title: app,
+                children: [],
+              });
+            }
+
+            const appNode = map.get(app);
+            appNode.children.push({
+              title: stream,
+              channelInfo: info,
+            });
+          });
+
+          return Array.from(map.values());
+        }
+
+        function getStreamTreeData() {
+          if (streamTreeDataCache) return Promise.resolve(streamTreeDataCache);
+          if (streamTreeLoading) return streamTreeLoading;
+
+          streamTreeLoading = new Promise((resolve, reject) => {
+            $.ajax({
+              url: "/api/stream/streamid-list?schema=fmp4",
+              method: "GET",
+              dataType: "json",
+              timeout: 10000,
+              success: function (res) {
+                if (res && res.code === 0) {
+                  streamTreeDataCache = buildStreamTreeData(res.data);
+                  resolve(streamTreeDataCache);
+                } else {
+                  reject(new Error((res && res.msg) || "获取流列表失败"));
+                }
+              },
+              error: function () {
+                reject(new Error("获取流列表失败"));
+              },
+              complete: function () {
+                streamTreeLoading = null;
+              },
+            });
+          });
+
+          return streamTreeLoading;
+        }
 
         // 屏幕单元抽象
         function VideoCell(container, index) {
           this.container = container; //  挂载到 ID_videowall_container
           this.index = index; // 分屏索引
           this.element = null;
+          this.baseUrl = null;
+          this.isStopped = true;
+          this.retryCount = 0;
+          this.retryTimer = null;
+          this.waitingTimer = null;
 
           this.init();
         }
@@ -138,7 +202,7 @@
           // 创建 DOM 元素
           this.element = document.createElement("div");
           this.element.className = "video-cell";
-          this.element.innerHTML = `<video autoplay muted></video>
+          this.element.innerHTML = `<video autoplay muted playsinline webkit-playsinline preload="none"></video>
                                       <div class="video-status"></div>
                                       <div class="video-btns">
                                         <button class="layui-btn config-btn layui-btn-sm" style="background-color: #16baaa; margin: 0" data-index="${this.index}">配置</button>
@@ -148,6 +212,9 @@
           // 将创建的 DOM 添加到父容器
           this.container.appendChild(this.element);
 
+          this.playerEl = this.element.querySelector("video");
+          this.statusEl = this.element.querySelector(".video-status");
+
           // 配置按钮: 打开流ID树
           let configBtn = this.element.querySelector(".config-btn");
           configBtn.addEventListener("click", () => this.openLayer());
@@ -156,21 +223,123 @@
           let resetBtn = this.element.querySelector(".reset-btn");
           resetBtn.addEventListener("click", () => this.stopPlay());
 
-          // 添加状态监听
-          // let playerEl = this.element.querySelector("video");
-          // let statusEl = this.element.querySelector(".video-status");
+          this.playerEl.addEventListener("playing", () => {
+            this.retryCount = 0;
+            this.clearWaitingTimer();
+            this.hideStatus();
+          });
 
-          // function showLoading() {
-          //   statusEl.textContent = "Loading...";
-          //   statusEl.style.display = "flex";
-          // }
-          // function hideStatus() {
-          //   statusEl.style.display = "none";
-          // }
-          // playerEl.addEventListener("loadstart", showLoading);
-          // playerEl.addEventListener("waiting", showLoading);
-          // playerEl.addEventListener("playing", hideStatus);
-          // playerEl.addEventListener("canplay", hideStatus);
+          this.playerEl.addEventListener("canplay", () => {
+            this.hideStatus();
+          });
+
+          this.playerEl.addEventListener("waiting", () => {
+            if (this.isStopped || !this.baseUrl) return;
+            if (this.waitingTimer !== null) return;
+            this.waitingTimer = setTimeout(() => {
+              this.waitingTimer = null;
+              this.scheduleReconnect();
+            }, 4000);
+          });
+
+          this.playerEl.addEventListener("stalled", () => {
+            this.scheduleReconnect();
+          });
+
+          this.playerEl.addEventListener("error", () => {
+            this.scheduleReconnect();
+          });
+
+          this.playerEl.addEventListener("ended", () => {
+            this.scheduleReconnect();
+          });
+        };
+
+        VideoCell.prototype.clearWaitingTimer = function () {
+          if (this.waitingTimer !== null) {
+            clearTimeout(this.waitingTimer);
+            this.waitingTimer = null;
+          }
+        };
+
+        VideoCell.prototype.clearRetryTimer = function () {
+          if (this.retryTimer !== null) {
+            clearTimeout(this.retryTimer);
+            this.retryTimer = null;
+          }
+        };
+
+        VideoCell.prototype.showStatus = function (text) {
+          if (!this.statusEl) return;
+          this.statusEl.textContent = text || "";
+          this.statusEl.style.display = "flex";
+        };
+
+        VideoCell.prototype.hideStatus = function () {
+          if (!this.statusEl) return;
+          this.statusEl.style.display = "none";
+        };
+
+        VideoCell.prototype.buildUrlWithTs = function () {
+          if (!this.baseUrl) return null;
+          const ts = Date.now();
+          return this.baseUrl.indexOf("?") >= 0
+            ? `${this.baseUrl}&_t=${ts}`
+            : `${this.baseUrl}?_t=${ts}`;
+        };
+
+        VideoCell.prototype.scheduleReconnect = function () {
+          if (this.isStopped || !this.baseUrl || !this.playerEl) return;
+
+          this.clearWaitingTimer();
+          this.clearRetryTimer();
+
+          const retryIndex = Math.min(this.retryCount, 6);
+          const baseDelay = Math.min(15000, 1000 * Math.pow(2, retryIndex));
+          const jitter = Math.floor(Math.random() * 300);
+          const delay = baseDelay + jitter;
+
+          this.showStatus("离线，重连中...");
+
+          this.retryTimer = setTimeout(() => {
+            this.retryTimer = null;
+            if (this.isStopped || !this.baseUrl || !this.playerEl) return;
+
+            const url = this.buildUrlWithTs();
+            if (!url) return;
+
+            this.playerEl.pause();
+            this.playerEl.src = url;
+            this.playerEl.load();
+            const p = this.playerEl.play();
+            if (p && typeof p.catch === "function") {
+              p.catch(() => {});
+            }
+            this.retryCount += 1;
+          }, delay);
+        };
+
+        VideoCell.prototype.playStream = function (app, stream) {
+          this.stopPlay();
+
+          if (!app || !stream || !this.playerEl) return;
+
+          this.isStopped = false;
+          this.retryCount = 0;
+          this.baseUrl = `http://${window.location.hostname}:8080/${encodeURIComponent(
+            app
+          )}/${encodeURIComponent(stream)}.live.mp4`;
+
+          const url = this.buildUrlWithTs();
+          if (!url) return;
+
+          this.showStatus("连接中...");
+          this.playerEl.src = url;
+          this.playerEl.load();
+          const p = this.playerEl.play();
+          if (p && typeof p.catch === "function") {
+            p.catch(() => {});
+          }
         };
 
         VideoCell.prototype.openLayer = function () {
@@ -182,95 +351,55 @@
             area: ["300px", "324px"],
             content: $("#ID_tpl_layer").html(),
             success: function (layero, index) {
-              $.ajax({
-                url: "/api/stream/streamid-list?schema=fmp4",
-                method: "GET",
-                success: function (res) {
-                  if (res.code === 0) {
-                    function toTreeData(data) {
-                      const map = new Map();
+              getStreamTreeData()
+                .then((treeData) => {
+                  tree.render({
+                    elem: "#ID_streamid_tree",
+                    data: treeData,
+                    click: function (obj) {
+                      if (!obj.data.channelInfo) return;
 
-                      data.forEach((item) => {
-                        const app = item.app;
-                        const stream = item.stream;
-
-                        const info = { app, stream };
-
-                        if (!map.has(app)) {
-                          map.set(app, {
-                            title: app,
-                            children: [],
-                          });
+                      layer.msg(
+                        `⏳ 正在连接 ${obj.data.channelInfo.app}/${obj.data.channelInfo.stream} ...`,
+                        {
+                          time: 1500,
+                          offset: "t",
+                          shift: 1,
                         }
+                      );
 
-                        const appNode = map.get(app);
+                      self.playStream(
+                        obj.data.channelInfo.app,
+                        obj.data.channelInfo.stream
+                      );
 
-                        appNode.children.push({
-                          title: stream,
-                          channelInfo: info,
-                        });
-                      });
-
-                      return Array.from(map.values());
-                    }
-
-                    let treeData = toTreeData(res.data);
-                    // console.log(treeData);
-
-                    // 渲染树
-                    tree.render({
-                      elem: "#ID_streamid_tree",
-                      data: treeData,
-                      click: function (obj) {
-                        if (obj.data.channelInfo) {
-                          // console.log(`播放 ${obj.data.channelInfo.app} 的 ${obj.data.channelInfo.stream} 流`);
-
-                          layer.msg(
-                            `⏳ 正在连接 ${obj.data.channelInfo.app}/${obj.data.channelInfo.stream} ...`,
-                            {
-                              time: 1500,
-                              offset: "t",
-                              shift: 1,
-                            }
-                          );
-
-                          self.stopPlay();
-
-                          let playerEl = self.element.querySelector("video");
-                          let statusEl =
-                            self.element.querySelector(".video-status");
-
-                          // 播放流
-                          playerEl.src = `http://${window.location.hostname}:8080/${obj.data.channelInfo.app}/${obj.data.channelInfo.stream}.live.mp4`;
-                          playerEl.load();
-
-                          // playerEl.play().catch((e) => {
-                          //   if (statusEl) {
-                          //     statusEl.textContent =
-                          //       "播放失败，请检查流是否存在";
-                          //     statusEl.style.display = "flex";
-                          //   }
-                          // });
-
-                          layer.close(index);
-                        }
-                      },
-                    });
-                  }
-                },
-              });
+                      layer.close(index);
+                    },
+                  });
+                })
+                .catch((err) => {
+                  layer.msg("❌ " + (err && err.message ? err.message : "获取流列表失败"), {
+                    time: 1500,
+                    offset: "t",
+                    shift: 1,
+                  });
+                });
             },
           });
         };
 
         VideoCell.prototype.stopPlay = function () {
-          let playerEl = this.element.querySelector("video");
+          this.isStopped = true;
+          this.baseUrl = null;
+          this.retryCount = 0;
+          this.clearWaitingTimer();
+          this.clearRetryTimer();
+          this.hideStatus();
 
-          if (playerEl) {
-            playerEl.pause();
-            playerEl.src = "";
-            playerEl.load();
-          }
+          if (!this.playerEl) return;
+          this.playerEl.pause();
+          this.playerEl.removeAttribute("src");
+          this.playerEl.load();
         };
 
         window.destroyVideoCells = function () {
@@ -288,32 +417,24 @@
         };
 
         function setLayout(num) {
-          // 停止播放并清空现有屏幕
-          if (nowVideoCells.length > 0) {
-            nowVideoCells.forEach((cell) => {
-              // 停止播放
-              cell.stopPlay();
-              // 移除 DOM 元素
-              if (cell.element && cell.element.parentNode) {
-                cell.element.parentNode.removeChild(cell.element);
-              }
-            });
-          }
-          nowVideoCells = [];
+          window.destroyVideoCells();
 
           let container = document.getElementById("ID_videowall_container");
           // 设置布局：移除旧 class，添加新 class
           container.className = ""; // 清空 class
           container.classList.add(`layout-${num}`);
 
+          let fragment = document.createDocumentFragment();
           // 创建屏幕实例
           for (let i = 0; i < num; i++) {
-            nowVideoCells.push(new VideoCell(container, i));
+            let cell = new VideoCell(fragment, i);
+            nowVideoCells.push(cell);
           }
+          container.appendChild(fragment);
         }
 
         // 监听全屏状态变化
-        document.addEventListener("fullscreenchange", () => {
+        const onFullscreenChange = () => {
           let container = document.getElementById("ID_videowall_container");
           let btns = container?.querySelectorAll(".video-btns");
 
@@ -330,7 +451,12 @@
               btn.style.display = "flex"; // 恢复默认 display
             });
           }
-        });
+        };
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+
+        window.clearnTimer = function () {
+          document.removeEventListener("fullscreenchange", onFullscreenChange);
+        };
 
         function fullscreen(elem) {
           if (!elem) {
