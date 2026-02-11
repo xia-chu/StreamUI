@@ -89,7 +89,10 @@ StreamUI 追求极简实现，前端未采用 Vue、React 等重量级框架，�
 
 整体框架图如下所示
 
-<img src="https://github.com/user-attachments/assets/ff25b267-f18b-4f3d-b2f5-07b4706aefd8" alt="framework" style="zoom:50%;" />
+<p style="margin: 10px 0px" align="center">
+  <img src="assets/arch.png" alt="framework" style="width: 40%" />
+</p>
+
 
 你可以根据自己的需求，在 StreamUI 的基础上添加新的功能或修改现有功能（如添加 ONVIF、GB28181 设备的识别、流接入、云台控制等）
 
