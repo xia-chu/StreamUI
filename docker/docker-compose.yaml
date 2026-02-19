@@ -11,6 +11,7 @@ services:
       - ../:/workspace
       - /opt/media/bin/www/record:/opt/media/bin/www/record
       - /opt/media/conf:/opt/media/conf
+      - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     restart: unless-stopped

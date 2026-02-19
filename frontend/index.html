@@ -82,20 +82,20 @@
         <ul class="layui-nav layui-nav-tree">
           <li class="layui-nav-item">
             <a data-page="./pages/pull-stream.html"><i class="layui-icon layui-icon-video"
-                style="margin-right: 20px"></i>主动拉流</a>
+                style="margin-right: 20px"></i>拉流接入</a>
           </li>
         </ul>
 
         <ul class="layui-nav layui-nav-tree">
           <li class="layui-nav-item">
-            <a data-page="./pages/stream-push.html"><i class="layui-icon layui-icon-video"
-                style="margin-right: 20px"></i>被动推流</a>
+            <a data-page="./pages/push-stream.html"><i class="layui-icon layui-icon-video"
+                style="margin-right: 20px"></i>推流接入</a>
           </li>
         </ul>
 
         <ul class="layui-nav layui-nav-tree">
           <li class="layui-nav-item">
-            <a data-page="./pages/wall.html"><i class="layui-icon layui-icon-layer"
+            <a data-page="./pages/video-wall.html"><i class="layui-icon layui-icon-layer"
                 style="margin-right: 20px"></i>分屏展示</a>
           </li>
         </ul>
@@ -109,7 +109,7 @@
 
         <ul class="layui-nav layui-nav-tree">
           <li class="layui-nav-item">
-            <a data-page="./pages/api-docs.html"><i class="layui-icon layui-icon-link"
+            <a data-open-api-docs="1" href="#"><i class="layui-icon layui-icon-link"
                 style="margin-right: 20px"></i>接口文档</a>
           </li>
         </ul>
@@ -159,6 +159,19 @@
 
         let util = layui.util;
         let $ = layui.jquery;
+
+        function getSwaggerDocsUrl() {
+          const protocol = window.location.protocol || "http:";
+          const hostname = window.location.hostname || "127.0.0.1";
+          return `${protocol}//${hostname}:10801/docs`;
+        }
+
+        $('a[data-open-api-docs="1"]').attr("href", getSwaggerDocsUrl()).attr("target", "_blank").attr("rel", "noopener noreferrer");
+
+        $("body").on("click", 'a[data-open-api-docs="1"]', function (e) {
+          e.preventDefault();
+          window.open(getSwaggerDocsUrl(), "_blank", "noopener,noreferrer");
+        });
 
         // 复制函数
         window.copyToClipboard = function (text) {
@@ -213,7 +226,7 @@
         // 使用事件委托监听菜单点击
         $("body").on("click", "a[data-page]", function (e) {
           e.preventDefault();
-          loadPage((url = $(this).data("page")));
+          loadPage($(this).data("page"));
         });
 
         let isCollapse = false;
