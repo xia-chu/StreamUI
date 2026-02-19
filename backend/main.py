@@ -17,14 +17,14 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import FastAPI, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from db import delete_pull_proxy as db_delete_pull_proxy
-from db import delete_record_policy as db_delete_record_policy
-from db import get_record_policy as db_get_record_policy
-from db import init_db as db_init
-from db import list_pull_proxies as db_list_pull_proxies
-from db import list_record_policies as db_list_record_policies
-from db import upsert_record_policy as db_upsert_record_policy
-from db import upsert_pull_proxy as db_upsert_pull_proxy
+from .db import delete_pull_proxy as db_delete_pull_proxy
+from .db import delete_record_policy as db_delete_record_policy
+from .db import get_record_policy as db_get_record_policy
+from .db import init_db as db_init
+from .db import list_pull_proxies as db_list_pull_proxies
+from .db import list_record_policies as db_list_record_policies
+from .db import upsert_record_policy as db_upsert_record_policy
+from .db import upsert_pull_proxy as db_upsert_pull_proxy
 from .scheduler import cleanup_old_videos
 from .utils import get_video_shanghai_time, get_zlm_secret
 

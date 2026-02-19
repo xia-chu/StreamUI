@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from db import list_record_policies
+from .db import list_record_policies
 
 
 def parse_filename_time(filename: str) -> datetime:
